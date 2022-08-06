@@ -1,6 +1,7 @@
 package admin;
 
 import inventory.db.MySqlCon;
+import inventory.db.ReturnValue;
 import inventory.model.Item;
 import inventory.model.Location;
 import inventory.model.Store;
@@ -24,6 +25,35 @@ public class AdminMain {
         Scanner sc = new Scanner(System.in);
         while(true){
             System.out.println("Choose your action:");
+            System.out.println("1. Admin");
+            System.out.println("2. Store Manager");
+            System.out.println("0. quit");
+            System.out.print("> ");
+            String s = sc.nextLine();
+
+            switch (s){
+                case "1":
+                    //add a password function
+                    adminCommands(sc);
+                    return;
+                case "2":
+                    System.out.println("Enter your store number");
+                    s = sc.nextLine();
+                    //incomplete
+                    printStores();
+                    break;
+                case "0":
+                    return;
+                default:
+                    System.out.println("unknown inputs");
+                    break;
+            }
+        }
+    }
+
+    public static void adminCommands(Scanner sc){
+        while(true){
+            System.out.println("Choose your action:");
             System.out.println("1. Add Store");
             System.out.println("2. List Stores");
             System.out.println("3. Remove Store");
@@ -44,7 +74,7 @@ public class AdminMain {
                     System.out.println("not yet implemented");
                     break;
                 case "4":
-                    System.out.println("not yet implemented");
+                    addItem(sc);
                     break;
                 case "5":
                     System.out.println("not yet implemented");
@@ -70,12 +100,12 @@ public class AdminMain {
                 return false;
             }
 
-            Store store = MySqlCon.addStore(s);
-            if(store == null){
-                System.out.println("store could not be created.");
+            ReturnValue<Store> store = MySqlCon.addStore(s);
+            if(!store.isSuccess()){
+                System.out.println("store could not be created: " + store.description);
                 return false;
             }
-            System.out.println("Congratulations! Store ID " + store.id + " with name " + store.name + " has been created!");
+            System.out.println("Congratulations! Store ID " + store.value.id + " with name " + store.value.name + " has been created!");
             return true;
 
 
@@ -102,5 +132,33 @@ public class AdminMain {
         } catch(SQLException se){
             return false;
         }
+    }
+
+    private static boolean addItem(Scanner sc){
+        System.out.println("Enter the item upc:");
+        System.out.print(">");
+        String upc = sc.nextLine();
+        if(upc.isEmpty()){
+
+            System.out.println("no input");
+            return false;
+        }
+
+        System.out.println("Enter the item description:");
+        System.out.print(">");
+        String description = sc.nextLine();
+        if(description.isEmpty()){
+
+            System.out.println("no input");
+            return false;
+        }
+
+        ReturnValue<Item> item = MySqlCon.addItem(upc, description);
+        if(!item.isSuccess()){
+            System.out.println(item.description);
+            return false;
+        }
+        System.out.println("Congratulations! Item sku " + item.value.sku + " with upc " + item.value.upc + " with description " + item.value.description + " has been created!");
+        return true;
     }
 }

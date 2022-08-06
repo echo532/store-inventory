@@ -40,6 +40,14 @@ CREATE TABLE `Locations` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
 
+CREATE TABLE `Item` (
+  `sku` int(11) NOT NULL,
+  `upc` varchar(64) DEFAULT NULL,
+  `description` varchar(128) DEFAULT NULL,
+  PRIMARY KEY (`sku`),
+  UNIQUE KEY `sku` (`sku`),
+  UNIQUE KEY `upc` (`upc`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE TABLE `Overstock` (
   `id` int(11) DEFAULT NULL,

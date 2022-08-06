@@ -17,6 +17,8 @@ public class MySqlCon {
     static String dbHostname = "dbHostname";
     static String dbDatabase = "dbDatabase";
 
+    public static int MAX_SKU = 1000000;
+
 //    public static void main(String args[]) throws SQLException {
 //        connect();
 //        Statement stmt=con.createStatement();
@@ -55,7 +57,7 @@ public class MySqlCon {
         }
     }
 
-    public static Store addStore(String name){
+    public static ReturnValue<Store> addStore(String name){
         try{
             PreparedStatement stmt =con.prepareStatement("INSERT INTO Stores (name) VALUES (?)", Statement.RETURN_GENERATED_KEYS);
             stmt.setString(1, name);
@@ -68,16 +70,16 @@ public class MySqlCon {
                 int id = rs.getInt(1);
                 Store store = new Store(id, name);
                 stmt.close();
-                return store;
+                return new ReturnValue<>(store);
 
             }
 
             //no good solution
             stmt.close();
-            return null;
+            return new ReturnValue<>(null, "unable to create store", false);
 
         } catch(SQLException se){
-            return null;
+            return new ReturnValue<>(null, se.getMessage(), false);
         }
     }
 
@@ -118,21 +120,40 @@ public class MySqlCon {
         }
     }
 
-    public static boolean addItem(String sku, String upc){
-        try{
-            PreparedStatement stmt =con.prepareStatement("INSERT INTO Item (sku, upc) VALUES (?, ?)");
-            stmt.setString(1, sku);
-            stmt.setString(2, upc);
+    public static ReturnValue<Item> addItem(String upc, String description){
 
-            int num = stmt.executeUpdate();
-            stmt.close();
-            if(num == 0){
-                return false;
+
+        Random rnd = new Random();
+        int tries = 10;
+        while(tries > 0){
+            try{
+                PreparedStatement stmt = con.prepareStatement("INSERT INTO Item(sku, upc, description) VALUES (?, ?, ?)");
+                int sku = rnd.nextInt(MAX_SKU);
+
+
+                stmt.setInt(1, sku);
+                stmt.setString(2, upc);
+                stmt.setString(3, description);
+
+                int num = stmt.executeUpdate();
+                stmt.close();
+                if(num == 1){
+                    return new ReturnValue<>(new Item(sku, upc, description), Integer.toString(tries), true);
+                }
+
+            } catch(SQLException se){
+                if(se.getMessage().endsWith("key 'upc'")){
+                    return new ReturnValue<>(null, "upc already exists", false);
+                }
+
+                tries--;
             }
-            return true;
-        } catch(SQLException se){
-            return false;
         }
+
+        return new ReturnValue<>(null, "Unable to create unique item code", false);
+
+
+
     }
 
 
