@@ -1,0 +1,71 @@
+{
+  "inventory":  [
+  {
+    "sku": 123456,
+    "upc": "13579",
+    "shelfData": {
+      "quantity": 5,
+      "maxQuantity": 10,
+      "location": {
+        "aisle": "Aisle 1",
+        "section": "A",
+        "shelf": "1"
+      }
+    },
+    "overstockData": {
+      "quantity": 0
+    }
+  },
+  {
+    "sku": 557073,
+    "upc": "9108080888959388159",
+    "shelfData": {
+      "quantity": 0,
+      "maxQuantity": 0
+    },
+    "overstockData": {
+      "quantity": 0
+    }
+  },
+  {
+    "sku": 570501,
+    "upc": "-4111190874126997721",
+    "shelfData": {
+      "quantity": 0,
+      "maxQuantity": 0
+    },
+    "overstockData": {
+      "quantity": 0
+    }
+  },
+  {
+    "sku": 667521,
+    "upc": "7690793666543764514",
+    "shelfData": {
+      "quantity": 0,
+      "maxQuantity": 0
+    },
+    "overstockData": {
+      "quantity": 0
+    }
+  }
+],
+
+
+  "aisles": [
+    {
+      "name": "Aisle 1",
+      "sections": [
+        {
+          "name": "A",
+          "shelves": [
+            {
+              "name": "1"
+
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

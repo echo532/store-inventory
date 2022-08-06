@@ -1,0 +1,44 @@
+{
+    "inventory": {
+      "shelvedItemList": [
+        {
+          "sku": 123456,
+          "upc": "13579",
+          "quantity": 5,
+          "location": {
+            "aisle": "Aisle 1",
+            "section": "A",
+            "shelf": "1"
+          }
+        }
+      ]
+    },
+
+    "overstock": {
+      "overstockItemList": [
+        {
+          "sku": 123456,
+          "upc": "13579",
+          "quantity": 10
+        }
+      ]
+    },
+
+
+    "aisles": [
+      {
+        "name": "Aisle 1",
+        "sections": [
+          {
+            "name": "A",
+            "shelves": [
+              {
+                "name": "1"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+}
