@@ -62,6 +62,11 @@ CREATE TABLE `Stores` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=latin1;
+
+CREATE TABLE `Plans` (
+  `sku` int(11) DEFAULT NULL,
+  `location` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 ```
 
 

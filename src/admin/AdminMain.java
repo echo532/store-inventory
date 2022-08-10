@@ -2,6 +2,7 @@ package admin;
 
 import inventory.db.MySqlCon;
 import inventory.db.ReturnValue;
+import inventory.model.InventoryItem;
 import inventory.model.Item;
 import inventory.model.Location;
 import inventory.model.Store;
@@ -9,11 +10,11 @@ import inventory.model.Store;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Optional;
-import java.util.Random;
 import java.util.Scanner;
 
 public class AdminMain {
+
+    private static Store store = null;
 
     public static void main(String[] args) throws IOException {
 
@@ -27,6 +28,7 @@ public class AdminMain {
             System.out.println("Choose your action:");
             System.out.println("1. Admin");
             System.out.println("2. Store Manager");
+            System.out.println("3. Store Employee");
             System.out.println("0. quit");
             System.out.print("> ");
             String s = sc.nextLine();
@@ -37,10 +39,13 @@ public class AdminMain {
                     adminCommands(sc);
                     return;
                 case "2":
-                    System.out.println("Enter your store number");
-                    s = sc.nextLine();
+
                     //incomplete
-                    printStores();
+                    managerCommands(sc);
+                    break;
+                case "3":
+                    workerCommands(sc);
+
                     break;
                 case "0":
                     return;
@@ -86,6 +91,114 @@ public class AdminMain {
                     break;
             }
         }
+    }
+
+
+    public static void managerCommands(Scanner sc){
+        if(store == null){
+            store = setStore(sc);
+            if(store == null){
+                System.out.println("Store could not be assigned.");
+                return;
+            }
+        }
+
+        System.out.println("Your store is " + store.name);
+
+        System.out.println("Choose your action:");
+        System.out.println("1. Find item in store");
+        System.out.println("2. Create a store plan");
+        System.out.println("3. Stock item");
+        System.out.println("4. Sweep store");
+        String s = sc.nextLine();
+        switch(s){
+            case "1":
+                findItem(sc);
+                break;
+            case "2":
+                createPlan(sc);
+                break;
+            case "3":
+                stockItem(sc);
+                break;
+
+        }
+
+
+
+
+
+
+    }
+
+    public static void workerCommands(Scanner sc){
+        if(store == null){
+            store = setStore(sc);
+            if(store == null){
+                System.out.println("Store could not be assigned.");
+                return;
+            }
+        }
+
+        while(true){
+
+        }
+
+
+
+
+
+
+    }
+
+    public static Store setStore(Scanner sc){
+        System.out.println("Choose your action:");
+        System.out.println("1. Find Store by Name");
+        System.out.println("2. Find Store by Number");
+        System.out.println("3. Back");
+        System.out.print(">");
+
+        String s = sc.nextLine();
+
+        ReturnValue<Store> store;
+        switch (s){
+            case "1":
+                //add a password function
+                System.out.println("Enter your store name");
+                String name = sc.nextLine();
+                if(name.isEmpty()){
+                    return null;
+                }
+                store = MySqlCon.getStore(name);
+                return store.value;
+
+            case "2":
+                while(true) {
+
+                    System.out.println("Enter your store number");
+                    String tempId = sc.nextLine();
+                    if(tempId.isEmpty()){
+                        return null;
+                    }
+                    try {
+                        int id = Integer.parseInt(tempId);
+                        store = MySqlCon.getStore(id);
+                        return store.value;
+
+                    } catch (NumberFormatException e) {
+                        System.out.println("Input must be a valid integer.");
+                    }
+                }
+
+            case "3":
+                return null;
+            default:
+                System.out.println("unknown inputs");
+                break;
+        }
+
+        return null;
+
     }
 
     private static boolean addStore(Scanner sc){
@@ -161,4 +274,89 @@ public class AdminMain {
         System.out.println("Congratulations! Item sku " + item.value.sku + " with upc " + item.value.upc + " with description " + item.value.description + " has been created!");
         return true;
     }
+
+    private static boolean createPlan(Scanner sc){
+        //sku, aisle, section, shelf
+
+        System.out.println("Enter the sku of the item you want to place in the Plan:");
+        System.out.println("SKU:");
+        int sku = Integer.parseInt(sc.nextLine());
+        ReturnValue<Boolean> value = MySqlCon.itemTypeExists(sku);
+        if(value.value == false){
+            System.out.println(value.description);
+            return false;
+        }
+        System.out.println("Enter location in form of: AISLE, SECTION, SHELF:");
+        String location = sc.nextLine();
+        String[] locations = location.split(",");
+
+        System.out.println("Finally, enter the maximum quantity intended for this item:");
+        int maxQuantity = Integer.parseInt(sc.nextLine()); //dangerous, fix in post
+
+
+        ReturnValue<Location> loc = MySqlCon.findOrCreateLocation(store, locations[0], locations[1], locations[2]);
+        ReturnValue<Boolean> plan = MySqlCon.insertPlan(sku, loc.value, maxQuantity);
+
+
+        System.out.println(plan.description);
+        return plan.value;
+
+
+
+    }
+
+    private static void findItem(Scanner sc){
+
+        System.out.println("Enter the sku number of the item you wish to find");
+        String s = sc.nextLine();
+
+        ReturnValue<Location> location = MySqlCon.findItem(Integer.parseInt(s), store);
+        if(!location.isSuccess()){
+            System.out.println("The item could not be found in your store.");
+            return;
+        }
+        System.out.println("Item Location: " + location.value.toString());
+    }
+
+    private static void stockItem(Scanner sc){
+        System.out.println("Enter the sku number of the item you wish to stock");
+        String s = sc.nextLine();
+        int sku = Integer.parseInt(s);
+        ReturnValue<Location> location = MySqlCon.findItem(sku, store);
+        if(!location.isSuccess()){
+            System.out.println("The item could not be found in your store.");
+            return;
+        }
+        System.out.println("Item Location " + location.value.toString());
+        ReturnValue<InventoryItem> inventoryItem = MySqlCon.getInventoryInfo(sku);
+        int emptyValue = inventoryItem.value.getMaxQuantity() - inventoryItem.value.getQuantity();
+        if(emptyValue == 0){
+            System.out.println("The Item will be placed in overstock.");
+            System.out.println("Place Item? Y/N");
+            s = sc.nextLine();
+            if(s.equals("Y")){
+                MySqlCon.placeInOverstock(sku);
+
+            }else{
+                return;
+            }
+        }else{
+            System.out.println("The Item will be placed in the shelf. " + emptyValue + " slots will be left.");
+            System.out.println("Place Item? Y/N");
+            s = sc.nextLine();
+            if(s.equals("Y")){
+                MySqlCon.placeOnShelf(sku);
+
+            }else{
+                return;
+            }
+
+        }
+
+
+
+
+    }
+
+
 }

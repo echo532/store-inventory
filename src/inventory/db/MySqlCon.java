@@ -1,8 +1,10 @@
 package inventory.db;
+import inventory.model.InventoryItem;
 import inventory.model.Item;
 import inventory.model.Location;
 import inventory.model.Store;
 
+import javax.xml.transform.Result;
 import java.sql.*;
 import java.util.Optional;
 import java.util.Random;
@@ -83,7 +85,7 @@ public class MySqlCon {
         }
     }
 
-    public static Store getStore(int id){
+    public static ReturnValue<Store> getStore(int id){
         try{
             PreparedStatement stmt =con.prepareStatement("SELECT * from Stores WHERE  id = ?");
             stmt.setInt(1, id);
@@ -94,14 +96,36 @@ public class MySqlCon {
                 String name = rs.getString("name");
                 s = new Store(id, name);
                 stmt.close();
-                return s;
+                return new ReturnValue<>(s);
 
 
             }
             stmt.close();
-            return null;
+            return new ReturnValue<>(null, "No store with this ID exists", false);
         } catch(SQLException se){
-            return null;
+            return new ReturnValue<>(null, "Failure to execute command", false);
+        }
+    }
+
+    public static ReturnValue<Store> getStore(String name){
+        try{
+            PreparedStatement stmt =con.prepareStatement("SELECT * from Stores WHERE  name = ?");
+            stmt.setString(1, name);
+
+            ResultSet rs=stmt.executeQuery();
+            Store s = null;
+            if(rs.next()) {
+                int id = rs.getInt("id");
+                s = new Store(id, name);
+                stmt.close();
+                return new ReturnValue<>(s);
+
+
+            }
+            stmt.close();
+            return new ReturnValue<>(null, "No store with this Name exists", false);
+        } catch(SQLException se){
+            return new ReturnValue<>(null, "Failure to execute command", false);
         }
     }
 
@@ -234,7 +258,7 @@ public class MySqlCon {
 
     }
 
-    private static Location findExisting(Store store, String aisle, String shelf, String section) throws SQLException {
+    private static Location findExistingLocation(Store store, String aisle, String shelf, String section) throws SQLException {
         PreparedStatement stmt =con.prepareStatement("select * from Locations where storeid = ? and aisle = ? and shelf = ? and section = ?");
         stmt.setInt(1, store.id);
         stmt.setString(2, aisle);
@@ -252,12 +276,12 @@ public class MySqlCon {
     }
 
 
-    public static Location findOrCreate(Store store, String aisle, String shelf, String section) {
+    public static ReturnValue<Location> findOrCreateLocation(Store store, String aisle, String shelf, String section) {
         try{
 
-            Location loc = findExisting(store, aisle, shelf, section);
+            Location loc = findExistingLocation(store, aisle, shelf, section);
             if(loc != null){
-                return loc;
+                return new ReturnValue<>(loc);
             }
 
 
@@ -270,18 +294,231 @@ public class MySqlCon {
 
             int num = stmt.executeUpdate();
             if(num== 0){
-                return null;
+                return new ReturnValue<>(null, "cannot create location", false);
             }
 
 
-            return findExisting(store, aisle, shelf, section);
+            return new ReturnValue<>(findExistingLocation(store, aisle, shelf, section));
 
 
 
         } catch(SQLException se){
-            return null;
+            return new ReturnValue<>(null, se.getMessage(), false);
         }
 
 
+    }
+
+
+    public static ReturnValue<Boolean> insertPlan(int sku, Location location, int maxQuantity) {
+
+        try{
+            PreparedStatement stmt =con.prepareStatement("insert into Plans (sku, location) VALUES (?, ?)");
+            stmt.setInt(1, sku);
+            stmt.setInt(2, location.id);
+
+            int num = stmt.executeUpdate();
+            if(num== 0){
+                return new ReturnValue<>(false, "cannot create plan", false);
+            }
+
+            //plan could exist in multiple places, but inventory cannot
+            //have to check if inventory already exists for said item
+            stmt.close();
+            stmt =con.prepareStatement("select * from Inventory where sku=?");
+            stmt.setInt(1, sku);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if(!rs.next()){
+                stmt.close();
+                stmt =con.prepareStatement("insert into Inventory (sku, location, quantity, maxQuantity) VALUES (?, ?, ?, ?)");
+                stmt.setInt(1, sku);
+                stmt.setInt(2, location.id);
+                stmt.setInt(3, 0);
+                stmt.setInt(4, maxQuantity);
+                num = stmt.executeUpdate();
+
+            }
+            stmt.close();
+
+
+            return new ReturnValue<>(true, "plan successfully created", true);
+
+
+
+        } catch(SQLException se){
+            return new ReturnValue<>(false, se.getMessage(), false);
+        }
+
+
+
+    }
+
+    public static ReturnValue<Location> findItem(int sku, Store store){
+
+        //find item location from item.sku -> inventory -> location
+        //print out location
+        //check max quantity, quantity, determine where it should go
+        //if max has been reached, place in overstock
+        try{
+            PreparedStatement stmt =con.prepareStatement("SELECT * FROM Plans where sku=?");
+            stmt.setInt(1, sku);
+
+            ResultSet rs1=stmt.executeQuery();
+            int locationId = 0;
+            while(rs1.next()){
+                locationId = rs1.getInt("location");
+            }
+
+            stmt.close();
+            stmt =con.prepareStatement("SELECT * FROM Locations where id=?");
+            stmt.setInt(1, locationId);
+            ResultSet rs2 = stmt.executeQuery();
+            String aisle = "";
+            String section = "";
+            String shelf = "";
+            while(rs2.next()){
+                aisle = rs2.getString("aisle");
+                section = rs2.getString("section");
+                shelf = rs2.getString("shelf");
+            }
+
+            return new ReturnValue<>(new Location(locationId, store.id, aisle, section, shelf));
+
+
+
+
+
+
+        } catch(SQLException se){
+            return new ReturnValue<>(null, se.getMessage(), false);
+        }
+
+
+    }
+
+    public static ReturnValue<InventoryItem> getInventoryInfo(int sku){
+
+        try{
+            PreparedStatement stmt =con.prepareStatement("SELECT * FROM Inventory where sku=?");
+            stmt.setInt(1, sku);
+
+            ResultSet rs=stmt.executeQuery();
+
+            int quantity;
+            int maxQuantity;
+            while(rs.next()){
+
+                quantity = rs.getInt("quantity");
+                maxQuantity = rs.getInt("maxQuantity");
+                return new ReturnValue<>(new InventoryItem(sku, quantity, maxQuantity), "found item in inventory", true);
+
+            }
+
+            return new ReturnValue<>(null, "could not find in inventory", false);
+
+
+
+
+        } catch(SQLException se){
+            return new ReturnValue<>(null, se.getMessage(), false);
+        }
+
+    }
+
+    public static ReturnValue<Boolean> itemTypeExists(int sku){
+        try{
+            PreparedStatement stmt =con.prepareStatement("SELECT * FROM Item where sku=?");
+            stmt.setInt(1, sku);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if(rs.next()){
+                return new ReturnValue<>(true, "item found", true);
+            }
+            return new ReturnValue<>(false, "item does not exist", true);
+
+
+
+        } catch(SQLException se){
+            return new ReturnValue<>(null, se.getMessage(), false);
+        }
+    }
+
+    public static ReturnValue<Boolean> placeInOverstock(int sku){
+        //check if overstock stack already exists
+        try{
+            PreparedStatement stmt =con.prepareStatement("SELECT * FROM Overstock where sku=?");
+            stmt.setInt(1, sku);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if(rs.next()){
+                //existing overstock stack
+                int quantity = rs.getInt("quantity");
+                quantity++;
+                stmt.close();
+                stmt = con.prepareStatement("UPDATE Overstock SET quantity=? WHERE sku=?");
+                stmt.setInt(1, quantity);
+                stmt.setInt(2, sku);
+                int num = stmt.executeUpdate();
+                if(num!=0){
+                    return new ReturnValue<>(true, "item placed in overstock successfully", true);
+                }
+                return new ReturnValue<>(false, "item could not be placed in overstock", false);
+
+
+            }
+            //overstock does not exist
+            stmt.close();
+            stmt =con.prepareStatement("insert into Overstock (sku, quantity) VALUES (?, ?)");
+            stmt.setInt(1, sku);
+            stmt.setInt(2, 1);
+            int num = stmt.executeUpdate();
+            if(num!=0){
+                return new ReturnValue<>(true, "item placed in overstock successfully", true);
+            }
+            return new ReturnValue<>(false, "item could not be placed in overstock", false);
+
+
+
+        } catch(SQLException se){
+            return new ReturnValue<>(false, se.getMessage(), false);
+        }
+    }
+
+    public static ReturnValue<Boolean> placeOnShelf(int sku){
+        //check if overstock stack already exists
+        try{
+            PreparedStatement stmt =con.prepareStatement("SELECT * FROM Inventory where sku=?");
+            stmt.setInt(1, sku);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if(rs.next()){
+
+                int quantity = rs.getInt("quantity");
+                quantity++;
+                stmt.close();
+                stmt = con.prepareStatement("UPDATE Inventory SET quantity=? WHERE sku=?");
+                stmt.setInt(1, quantity);
+                stmt.setInt(2, sku);
+                int num = stmt.executeUpdate();
+                if(num!=0){
+                    return new ReturnValue<>(true, "item placed in overstock successfully", true);
+                }
+                return new ReturnValue<>(false, "item could not be placed on shelf", false);
+
+
+            }
+            return new ReturnValue<>(false, "item could not be placed on shelf", false);
+
+
+
+
+        } catch(SQLException se){
+            return new ReturnValue<>(false, se.getMessage(), false);
+        }
     }
 }
