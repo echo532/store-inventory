@@ -44,7 +44,7 @@ public class AdminMain {
                     managerCommands(sc);
                     break;
                 case "3":
-                    workerCommands(sc);
+                    employeeCommands(sc);
 
                     break;
                 case "0":
@@ -131,7 +131,7 @@ public class AdminMain {
 
     }
 
-    public static void workerCommands(Scanner sc){
+    public static void employeeCommands(Scanner sc){
         if(store == null){
             store = setStore(sc);
             if(store == null){
@@ -175,7 +175,16 @@ public class AdminMain {
 
         int sku = Integer.parseInt(s);
 
-        MySqlCon.sellItem(sku);
+        ReturnValue<Integer> itemSold = MySqlCon.removeItemFromInventory(sku);
+        System.out.println(itemSold.description);
+        if(itemSold.value == 0 && itemSold.isSuccess() == false){
+            //check in overstock
+            itemSold = MySqlCon.removeItemFromOverstock(sku);
+            System.out.println(itemSold.description);
+
+
+        }
+
 
     }
 

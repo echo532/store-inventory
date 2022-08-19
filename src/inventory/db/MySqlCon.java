@@ -4,7 +4,6 @@ import inventory.model.Item;
 import inventory.model.Location;
 import inventory.model.Store;
 
-import javax.xml.transform.Result;
 import java.sql.*;
 import java.util.Optional;
 import java.util.Random;
@@ -522,7 +521,7 @@ public class MySqlCon {
         }
     }
 
-    public static ReturnValue<Boolean> sellItem(int sku) {
+    public static ReturnValue<Integer> removeItemFromInventory(int sku) {
         try{
             PreparedStatement stmt =con.prepareStatement("SELECT * FROM Inventory where sku=?");
             stmt.setInt(1, sku);
@@ -533,7 +532,7 @@ public class MySqlCon {
 
                 int quantity = rs.getInt("quantity");
                 if(quantity == 0){
-                    return new ReturnValue<>(false, "No items on the shelves for this item", false);
+                    return new ReturnValue<>(0, "Item not supposed to be on shelf!", false);
                 }
                 quantity--;
                 stmt.close();
@@ -542,20 +541,57 @@ public class MySqlCon {
                 stmt.setInt(2, sku);
                 int num = stmt.executeUpdate();
                 if(num!=0){
-                    return new ReturnValue<>(true, "item sold successfully", true);
+                    return new ReturnValue<>(quantity, "item sold successfully", true);
                 }
-                return new ReturnValue<>(false, "item could not be sold", false);
+                return new ReturnValue<>(quantity, "item could not be sold", false);
 
 
             }
-            return new ReturnValue<>(false, "item could not be placed on shelf", false);
+            return new ReturnValue<>(0, "item could not be found", false);
 
 
 
 
         } catch(SQLException se){
-            return new ReturnValue<>(false, se.getMessage(), false);
+            return new ReturnValue<>(0, "item could not be found", false);
         }
 
+    }
+
+    public static ReturnValue<Integer> removeItemFromOverstock(int sku) {
+
+        try{
+            PreparedStatement stmt =con.prepareStatement("SELECT * FROM Overstock where sku=?");
+            stmt.setInt(1, sku);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if(rs.next()){
+
+                int quantity = rs.getInt("quantity");
+                if(quantity == 0){
+                    return new ReturnValue<>(0, "No items in overstock", false);
+                }
+                quantity--;
+                stmt.close();
+                stmt = con.prepareStatement("UPDATE Overstock SET quantity=? WHERE sku=?");
+                stmt.setInt(1, quantity);
+                stmt.setInt(2, sku);
+                int num = stmt.executeUpdate();
+                if(num!=0){
+                    return new ReturnValue<>(quantity, "item sold successfully (from overstock)", true);
+                }
+                return new ReturnValue<>(quantity, "item could not be sold", false);
+
+
+            }
+            return new ReturnValue<>(0, "item could not be found", false);
+
+
+
+
+        } catch(SQLException se){
+            return new ReturnValue<>(0, "item could not be found", false);
+        }
     }
 }
