@@ -140,7 +140,23 @@ public class AdminMain {
             }
         }
 
+        System.out.println("Your store is " + store.name);
+
+        System.out.println("Choose your action:");
+        System.out.println("1. sell item");
+
+        String s = sc.nextLine();
+
         while(true){
+            switch(s){
+                case "1":
+                    sellItem(sc);
+                    break;
+
+            }
+
+
+
 
         }
 
@@ -148,6 +164,18 @@ public class AdminMain {
 
 
 
+
+    }
+
+    private static void sellItem(Scanner sc) {
+
+        System.out.println("Enter item sku");
+
+        String s = sc.nextLine();
+
+        int sku = Integer.parseInt(s);
+
+        MySqlCon.sellItem(sku);
 
     }
 

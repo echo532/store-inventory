@@ -521,4 +521,41 @@ public class MySqlCon {
             return new ReturnValue<>(false, se.getMessage(), false);
         }
     }
+
+    public static ReturnValue<Boolean> sellItem(int sku) {
+        try{
+            PreparedStatement stmt =con.prepareStatement("SELECT * FROM Inventory where sku=?");
+            stmt.setInt(1, sku);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if(rs.next()){
+
+                int quantity = rs.getInt("quantity");
+                if(quantity == 0){
+                    return new ReturnValue<>(false, "No items on the shelves for this item", false);
+                }
+                quantity--;
+                stmt.close();
+                stmt = con.prepareStatement("UPDATE Inventory SET quantity=? WHERE sku=?");
+                stmt.setInt(1, quantity);
+                stmt.setInt(2, sku);
+                int num = stmt.executeUpdate();
+                if(num!=0){
+                    return new ReturnValue<>(true, "item sold successfully", true);
+                }
+                return new ReturnValue<>(false, "item could not be sold", false);
+
+
+            }
+            return new ReturnValue<>(false, "item could not be placed on shelf", false);
+
+
+
+
+        } catch(SQLException se){
+            return new ReturnValue<>(false, se.getMessage(), false);
+        }
+
+    }
 }
