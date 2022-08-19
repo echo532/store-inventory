@@ -5,6 +5,8 @@ import inventory.model.Location;
 import inventory.model.Store;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
@@ -592,6 +594,59 @@ public class MySqlCon {
 
         } catch(SQLException se){
             return new ReturnValue<>(0, "item could not be found", false);
+        }
+    }
+
+    public static ReturnValue<Item> findItem(int sku){
+
+        try{
+            PreparedStatement stmt =con.prepareStatement("SELECT * FROM Item where sku=?");
+            stmt.setInt(1, sku);
+            ResultSet rs = stmt.executeQuery();
+
+            if(rs.next()) {
+
+                String upc = rs.getString("upc");
+                String description = rs.getString("description");
+
+                return new ReturnValue<>(new Item(sku, upc, description), "Item found", true);
+            }
+            return new ReturnValue<>(null, "no item found", false);
+
+        }catch(SQLException se){
+            return new ReturnValue<>(null, "item could not be found", false);
+        }
+
+    }
+
+    public static ReturnValue<List<Item>> sweepStore() {
+        try{
+            PreparedStatement stmt =con.prepareStatement("SELECT * FROM Inventory where quantity=?");
+            stmt.setInt(1, 0);
+
+            ResultSet rs = stmt.executeQuery();
+
+            List<Item> emptyShelfList = new ArrayList<>();
+
+            while(rs.next()){
+
+                int sku = rs.getInt("sku");
+                ReturnValue<Item> item = findItem(sku);
+
+                emptyShelfList.add(item.value);
+
+
+
+
+            }
+            stmt.close();
+            return new ReturnValue<>(emptyShelfList, "full list", true);
+
+
+
+
+        } catch(SQLException se){
+            return new ReturnValue<>(null, "list could not be made", false);
         }
     }
 }

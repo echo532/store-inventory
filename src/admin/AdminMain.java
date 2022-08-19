@@ -10,6 +10,8 @@ import inventory.model.Store;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class AdminMain {
@@ -121,6 +123,9 @@ public class AdminMain {
             case "3":
                 stockItem(sc);
                 break;
+            case "4":
+                sweepStore(sc);
+                break;
 
         }
 
@@ -129,6 +134,15 @@ public class AdminMain {
 
 
 
+    }
+
+    private static void sweepStore(Scanner sc) {
+
+        ReturnValue<List<Item>> tempList = MySqlCon.sweepStore();
+        System.out.println(tempList.description);
+        for(Item item : tempList.value){
+            System.out.println(item.sku);
+        }
     }
 
     public static void employeeCommands(Scanner sc){
