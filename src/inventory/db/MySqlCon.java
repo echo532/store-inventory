@@ -619,7 +619,7 @@ public class MySqlCon {
 
     }
 
-    public static ReturnValue<List<Item>> sweepStore() {
+    public static ReturnValue<List<Item>> findEmptyInStore() {
         try{
             PreparedStatement stmt =con.prepareStatement("SELECT * FROM Inventory where quantity=?");
             stmt.setInt(1, 0);
@@ -635,18 +635,58 @@ public class MySqlCon {
 
                 emptyShelfList.add(item.value);
 
-
-
-
             }
             stmt.close();
             return new ReturnValue<>(emptyShelfList, "full list", true);
 
+        } catch(SQLException se){
+            return new ReturnValue<>(null, "list could not be made", false);
+        }
+    }
 
+//    public static ReturnValue<List<Item>> findInvalidInStore() {
+//        try{
+//            PreparedStatement stmt =con.prepareStatement("SELECT * FROM Inventory");
+//            stmt.setInt(1, 0);
+//
+//            ResultSet rs = stmt.executeQuery();
+//
+//            List<Item> emptyShelfList = new ArrayList<>();
+//
+//            while(rs.next()){
+//
+//                int sku = rs.getInt("sku");
+//                ReturnValue<Item> item = findItem(sku);
+//
+//                emptyShelfList.add(item.value);
+//
+//            }
+//            stmt.close();
+//            return new ReturnValue<>(emptyShelfList, "full list", true);
+//
+//        } catch(SQLException se){
+//            return new ReturnValue<>(null, "list could not be made", false);
+//        }
+//    }
+
+
+
+    public static ReturnValue<Boolean> removeItem(int sku) {
+
+        try{
+            PreparedStatement stmt =con.prepareStatement("DELETE FROM Item where sku=?");
+            stmt.setInt(1, sku);
+
+            int num = stmt.executeUpdate();
+
+            if(num == 0) {
+                return new ReturnValue<>(false, "item could not be deleted", false);
+            }
+            return new ReturnValue<>(true, "item deleted successfully", true);
 
 
         } catch(SQLException se){
-            return new ReturnValue<>(null, "list could not be made", false);
+            return new ReturnValue<>(false, "item could not be found", false);
         }
     }
 }

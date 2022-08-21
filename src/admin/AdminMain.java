@@ -10,7 +10,6 @@ import inventory.model.Store;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -84,7 +83,7 @@ public class AdminMain {
                     addItem(sc);
                     break;
                 case "5":
-                    System.out.println("not yet implemented");
+                    removeItem(sc);
                     break;
                 case "0":
                     return;
@@ -93,6 +92,22 @@ public class AdminMain {
                     break;
             }
         }
+    }
+
+    private static void removeItem(Scanner sc) {
+        System.out.println("Enter the sku that will be removed.");
+        String s = sc.nextLine();
+        int sku = Integer.parseInt(s);
+        ReturnValue<Item> removedItem = MySqlCon.findItem(sku);
+        System.out.println("Are you sure you want to remove " + removedItem.value.description + "?");
+        System.out.println("Y/N");
+        s = sc.nextLine();
+        if(s.equals("Y")){
+            ReturnValue<Boolean> val = MySqlCon.removeItem(sku);
+        }
+        return;
+
+
     }
 
 
@@ -137,8 +152,9 @@ public class AdminMain {
     }
 
     private static void sweepStore(Scanner sc) {
+        //TODO: check for items no longer in database
 
-        ReturnValue<List<Item>> tempList = MySqlCon.sweepStore();
+        ReturnValue<List<Item>> tempList = MySqlCon.findEmptyInStore();
         System.out.println(tempList.description);
         for(Item item : tempList.value){
             System.out.println(item.sku);
@@ -181,13 +197,18 @@ public class AdminMain {
 
     }
 
-    private static void sellItem(Scanner sc) {
+    private static boolean sellItem(Scanner sc) {
 
         System.out.println("Enter item sku");
 
         String s = sc.nextLine();
 
         int sku = Integer.parseInt(s);
+        ReturnValue<Item> val = MySqlCon.findItem(sku);
+        if(val.value==null){
+            System.out.println("This item does not exist");
+            return false;
+        }
 
         ReturnValue<Integer> itemSold = MySqlCon.removeItemFromInventory(sku);
         System.out.println(itemSold.description);
@@ -195,9 +216,11 @@ public class AdminMain {
             //check in overstock
             itemSold = MySqlCon.removeItemFromOverstock(sku);
             System.out.println(itemSold.description);
+            return true;
 
 
         }
+        return false;
 
 
     }
